@@ -4,5 +4,4 @@ __pycache__/
 *.pth
 .DS_Store
 .anaconda/
-venv/
 .idea/
