@@ -35,6 +35,7 @@ print(df.dtypes)
 
 print("\nEksik değer sayıları:")
 print(df.isnull().sum())
+
 #Bu aşamada veri seti başarıyla yüklendi. Özellikler X, hedef değişken
 # ise y olarak ayrıldı. Veri tablo formatına dönüştürülerek ilk 5 satır incelendi
 # ve veri yapısının doğru şekilde geldiği görüldü.
@@ -101,6 +102,7 @@ stats_df = pd.DataFrame({
 })
 
 print(stats_df)
+
 #Her özellik için temel istatistiksel ölçüler hesaplanmıştır. Bazı değişkenlerde minimum ve maksimum değerler arasında
 # geniş farklar bulunurken, bazı sütunlarda ortalama ve medyan değerlerinin birbirine yakın olduğu görülmüştür.
 # Bu durum, değişkenlerin dağılımlarının farklı yapılar gösterdiğini ortaya koymaktadır.
@@ -188,6 +190,7 @@ plt.ylabel("Explained Variance Ratio")
 plt.title("PCA Explained Variance Ratio")
 plt.grid(True)
 plt.show()
+
 #PCA uygulanarak bileşenlerin açıkladığı varyans oranları incelenmiştir. İlk bileşenlerin verinin
 #daha büyük bir kısmını temsil ettiği görülmüştür. Ortalama explained variance ratio değerinden
 #büyük olan bileşenler seçilerek uygun PCA boyutu belirlenmiştir.
@@ -217,6 +220,7 @@ plt.title("Ilk Iki PCA Bileseni ile Sinif Dagilimi")
 plt.colorbar(scatter, label="Sinif")
 plt.grid(True)
 plt.show()
+
 #Seçilen PCA bileşenleri kullanılarak veri daha düşük boyutlu bir uzaya dönüştürülmüştür.
 #İlk iki PCA bileşeni ile çizilen scatter plot incelendiğinde sınıfların belirli ölçüde ayrıştığı gözlemlenebilir.
 
@@ -246,6 +250,7 @@ plt.title("LDA Bileseni Uzerinde Sinif Dagilimi")
 plt.legend()
 plt.grid(True)
 plt.show()
+
 #LDA yöntemi uygulanarak sınıf ayrımını en iyi yansıtan doğrusal bileşen elde edilmiştir. Ancak kullanılan veri seti
 #iki sınıflı olduğu için LDA’da maksimum bileşen sayısı 1 ile sınırlıdır. Bu nedenle ödevde belirtilen 3 bileşen koşulu
 #bu veri setinde matematiksel olarak uygulanamamaktadır.
@@ -276,6 +281,7 @@ for data_name, (X_tr, X_v, X_te) in data_representations.items():
         model.fit(X_tr, y_train)
 
         trained_models[(model_name, data_name)] = model
+
 #Beş farklı sınıflandırma algoritması, ham veri, PCA verisi ve LDA verisi üzerinde ayrı ayrı eğitilmiştir.
 #Böylece veri temsiline göre model performanslarının karşılaştırılması amaçlanmıştır.
 
@@ -315,6 +321,7 @@ best_data_name = best_row["Veri Temsili"]
 
 print("\nEn iyi model:")
 print(best_row)
+
 #Tüm modeller validation veri seti üzerinde accuracy, precision, recall, F1-score ve ROC-AUC metrikleri ile
 #değerlendirilmiştir. Sonuçlar karşılaştırıldığında en iyi modelin Logistic Regression olduğu gözlemlenmiştir.
 
@@ -346,6 +353,7 @@ plt.title("Confusion Matrix")
 plt.xlabel("Tahmin Edilen Sinif")
 plt.ylabel("Gercek Sinif")
 plt.show()
+
 #Confusion matrix incelendiğinde modelin doğru ve yanlış sınıflandırmaları açık biçimde görülmektedir.
 #Köşegen üzerindeki yüksek değerler modelin başarılı tahminler yaptığını göstermektedir.
 
@@ -386,6 +394,7 @@ shap_values = explainer(X_test_best_df)
 
 shap.summary_plot(shap_values, X_test_best_df)
 shap.plots.bar(shap_values)
+
 #En iyi validation modeli için SHAP analizi uygulanmıştır. Summary plot ve bar plot incelendiğinde model kararlarında
 #en etkili olan özellikler belirlenmiştir. Bu sayede modelin yalnızca ne tahmin ettiği değil, tahmini hangi
 #değişkenlere dayanarak yaptığı da yorumlanabilmiştir.
