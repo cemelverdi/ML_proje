@@ -12,6 +12,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from xgboost import XGBClassifier
+from sklearn.base import clone
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.metrics import confusion_matrix, roc_curve, auc
 import shap
@@ -169,22 +170,27 @@ print("y_test boyutu:", y_test.shape)
 #Veri seti %70 eğitim, %10 doğrulama ve %20 test olacak şekilde bölünmüştür.
 #Sınıf dağılımının korunması amacıyla stratify parametresi kullanılmıştır.
 
+X_train_raw = X_train.copy()
+X_val_raw = X_val.copy()
+X_test_raw = X_test.copy()
+
+print("Ham veri boyutlari:")
+print("X_train_raw:", X_train_raw.shape)
+print("X_val_raw:", X_val_raw.shape)
+print("X_test_raw:", X_test_raw.shape)
+
 pca_full = PCA()
-X_train_pca_full = pca_full.fit_transform(X_train)
+pca_full.fit(X_train_raw)
 
 explained_variance = pca_full.explained_variance_ratio_
-
-print("Explained variance ratio:")
-print(explained_variance)
-
 mean_variance = np.mean(explained_variance)
-print("\nExplained variance ratio ortalamasi:", mean_variance)
-
 n_components_selected = np.sum(explained_variance > mean_variance)
+
+print("\nExplained variance ratio ortalamasi:", mean_variance)
 print("Secilen PCA bilesen sayisi:", n_components_selected)
 
 plt.figure(figsize=(10, 6))
-plt.plot(range(1, len(explained_variance) + 1), explained_variance, marker='o')
+plt.plot(range(1, len(explained_variance) + 1), explained_variance, marker="o")
 plt.xlabel("Bilesen Numarasi")
 plt.ylabel("Explained Variance Ratio")
 plt.title("PCA Explained Variance Ratio")
@@ -195,12 +201,14 @@ plt.show()
 #daha büyük bir kısmını temsil ettiği görülmüştür. Ortalama explained variance ratio değerinden
 #büyük olan bileşenler seçilerek uygun PCA boyutu belirlenmiştir.
 
+
 pca = PCA(n_components=n_components_selected)
 
 X_train_pca = pca.fit_transform(X_train)
 X_val_pca = pca.transform(X_val)
 X_test_pca = pca.transform(X_test)
 
+print("\nPCA veri boyutlari:")
 print("X_train_pca boyutu:", X_train_pca.shape)
 print("X_val_pca boyutu:", X_val_pca.shape)
 print("X_test_pca boyutu:", X_test_pca.shape)
@@ -226,16 +234,16 @@ plt.show()
 
 lda = LinearDiscriminantAnalysis(n_components=1)
 
-X_train_lda = lda.fit_transform(X_train, y_train)
-X_val_lda = lda.transform(X_val)
-X_test_lda = lda.transform(X_test)
+X_train_lda = lda.fit_transform(X_train_raw, y_train)
+X_val_lda = lda.transform(X_val_raw)
+X_test_lda = lda.transform(X_test_raw)
 
-print("X_train_lda boyutu:", X_train_lda.shape)
-print("X_val_lda boyutu:", X_val_lda.shape)
-print("X_test_lda boyutu:", X_test_lda.shape)
+print("\nLDA veri boyutlari:")
+print("X_train_lda:", X_train_lda.shape)
+print("X_val_lda:", X_val_lda.shape)
+print("X_test_lda:", X_test_lda.shape)
 
 plt.figure(figsize=(10, 6))
-
 for label in sorted(y_train.unique()):
     plt.hist(
         X_train_lda[y_train == label],
@@ -262,12 +270,12 @@ models = {
     "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
     "Decision Tree": DecisionTreeClassifier(random_state=42),
     "Random Forest": RandomForestClassifier(random_state=42),
-    "XGBoost": XGBClassifier(eval_metric='logloss', random_state=42),
+    "XGBoost": XGBClassifier(eval_metric="logloss", random_state=42),
     "GaussianNB": GaussianNB()
 }
 
 data_representations = {
-    "Ham Veri": (X_train, X_val, X_test),
+    "Ham Veri": (X_train_raw, X_val_raw, X_test_raw),
     "PCA Veri": (X_train_pca, X_val_pca, X_test_pca),
     "LDA Veri": (X_train_lda, X_val_lda, X_test_lda)
 }
@@ -278,48 +286,49 @@ for data_name, (X_tr, X_v, X_te) in data_representations.items():
     for model_name, model in models.items():
         print(f"Egitiliyor: {model_name} - {data_name}")
 
-        model.fit(X_tr, y_train)
+        current_model = clone(model)
+        current_model.fit(X_tr, y_train)
 
-        trained_models[(model_name, data_name)] = model
+        trained_models[(model_name, data_name)] = current_model
 
 #Beş farklı sınıflandırma algoritması, ham veri, PCA verisi ve LDA verisi üzerinde ayrı ayrı eğitilmiştir.
 #Böylece veri temsiline göre model performanslarının karşılaştırılması amaçlanmıştır.
 
 validation_results = []
 
-for data_name, (X_tr, X_v, X_te) in data_representations.items():
-    for model_name, model in models.items():
-        model.fit(X_tr, y_train)
-        y_val_pred = model.predict(X_v)
-        y_val_prob = model.predict_proba(X_v)[:, 1]
+for (model_name, data_name), model in trained_models.items():
+    X_tr, X_v, X_te = data_representations[data_name]
 
-        acc = accuracy_score(y_val, y_val_pred)
-        prec = precision_score(y_val, y_val_pred)
-        rec = recall_score(y_val, y_val_pred)
-        f1 = f1_score(y_val, y_val_pred)
-        roc_auc = roc_auc_score(y_val, y_val_prob)
+    y_val_pred = model.predict(X_v)
+    y_val_prob = model.predict_proba(X_v)[:, 1]
 
-        validation_results.append({
-            "Model": model_name,
-            "Veri Temsili": data_name,
-            "Accuracy": acc,
-            "Precision": prec,
-            "Recall": rec,
-            "F1-score": f1,
-            "ROC-AUC": roc_auc
-        })
+    acc = accuracy_score(y_val, y_val_pred)
+    prec = precision_score(y_val, y_val_pred)
+    rec = recall_score(y_val, y_val_pred)
+    f1 = f1_score(y_val, y_val_pred)
+    roc_auc = roc_auc_score(y_val, y_val_prob)
 
+    validation_results.append({
+        "Model": model_name,
+        "Veri Temsili": data_name,
+        "Accuracy": acc,
+        "Precision": prec,
+        "Recall": rec,
+        "F1-score": f1,
+        "ROC-AUC": roc_auc
+    })
 
 results_df = pd.DataFrame(validation_results)
 results_df = results_df.sort_values(by=["F1-score", "ROC-AUC"], ascending=False)
 
-print(results_df)
+print("\nValidation Sonuclari:")
+print(results_df.to_string(index=False))
 
 best_row = results_df.iloc[0]
 best_model_name = best_row["Model"]
 best_data_name = best_row["Veri Temsili"]
 
-print("\nEn iyi model:")
+print("\nEn iyi validation modeli:")
 print(best_row)
 
 #Tüm modeller validation veri seti üzerinde accuracy, precision, recall, F1-score ve ROC-AUC metrikleri ile
